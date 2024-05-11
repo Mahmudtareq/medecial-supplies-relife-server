@@ -1,61 +1,66 @@
 const express = require("express");
 const cors = require("cors");
-const mongoose = require("mongoose");
-const Supply = require("./model/supplyes");
-const { ObjectId } = require("mongodb");
+const { ObjectId, MongoClient, ServerApiVersion } = require("mongodb");
 require("dotenv").config();
 
 const app = express();
 const port = process.env.PORT || 5000;
-
 // Middleware
 app.use(cors());
 app.use(express.json());
 
 // MongoDB Connection URL
 const uri = process.env.MONGODB_URI;
+const client = new MongoClient(
+  "mongodb+srv://db_users:rOojXTqXPuSZfAPE@cluster0.l1qze.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
+  {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    },
+  }
+);
 
 async function run() {
   try {
-    await mongoose.connect(uri);
+    // await client.connect();
     console.log("Connected to MongoDB");
-    // code start
+    const db = client.db("suppliedatabase");
+    const suppliesCollections = db.collection("supplies");
 
     // get all supplies data
     app.get("/supplies", async (req, res) => {
-      try {
-        const supplydata = await Supply.find({});
-        res.send(supplydata);
-      } catch (error) {
-        console.error(error);
-        res.status(500).send(error);
-      }
+      const supplydata = await suppliesCollections.find({}).toArray();
+      res.send(supplydata);
     });
     // post supplies data
     app.post("/supplies", async (req, res) => {
       try {
         const suppliesData = req.body;
-        const result = await Supply.create(suppliesData);
+        const result = await suppliesCollections.insertOne(suppliesData);
         res.send(result);
       } catch (error) {
         console.error(error);
         res.status(500).send(error);
       }
     });
-    // get single supplies
+    // // get single supplies
     app.get("/supplies/:id", async (req, res) => {
       const id = req.params.id;
-      const result = await Supply.findOne({ _id: new ObjectId(id) });
+      const result = await suppliesCollections.findOne({
+        _id: new ObjectId(id),
+      });
       res.send(result);
     });
-    // delete 
+    // // delete
     app.delete("/supplies/:id", async (req, res) => {
       try {
         const id = req.params.id;
-        // if (!ObjectId.isValid(id)) {
-        //   return res.status(400).json({ error: "Invalid ID format" });
-        // }
-        const result = await Supply.deleteOne({ _id: new ObjectId(id) });
+
+        const result = await suppliesCollections.deleteOne({
+          _id: new ObjectId(id),
+        });
         res.json(result);
       } catch (error) {
         console.error("Error deleting supply:", error);
@@ -63,27 +68,7 @@ async function run() {
       }
     });
 
-    // update data 
-    // app.put("/supplies/:id", async (req, res) => {
-    //   try {
-    //     const id = req.params.id;
-    //     const updatedData = req.body; // Updated data for the supply
-
-    //     // Update the supply in the database
-    //     const result = await Supply.updateOne(
-    //       { _id: new ObjectId(id) },
-    //       { $set: updatedData }
-    //     );
-
-    //     if (result.modifiedCount === 0) {
-    //       return res.status(404).json({ error: "Supply not found" });
-    //     }
-    //     res.status(200).json({ message: "Supply updated successfully" });
-    //   } catch (error) {
-    //     console.error("Error updating supply:", error);
-    //     res.status(500).json({ error: "Internal server error" });
-    //   }
-    // });
+    // update data
 
     // Start the server
     app.listen(port, () => {
@@ -91,11 +76,11 @@ async function run() {
     });
   } catch (error) {
     console.error("Error connecting to MongoDB:", error);
-    process.exit(1);
+    // process.exit(1);
   }
 }
 
-run().catch(console.error);
+run();
 
 // Test route
 app.get("/", (req, res) => {
